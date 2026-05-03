@@ -7,8 +7,11 @@ from contextlib import nullcontext
 from datetime import datetime
 
 import click
+import json 
 
 import reader
+from reader._hash_utils import _json_default
+
 
 from . import make_reader
 from . import StorageError
@@ -374,27 +377,38 @@ def update(reader, url, new, scheduled, workers, verbose):
 def list_cmd():
     """List feeds or entries."""
 
-
 @list_cmd.command()
+@click.option(
+    '--json',
+    'json_output',
+    is_flag=True,
+    help='Output as JSON.',
+)
 @pass_reader
-def feeds(reader):
+def feeds(reader, json_output):
     """List all the feeds."""
     for feed in reader.get_feeds():
-        click.echo(feed.url)
-
+        if json_output:
+            click.echo(json.dumps(feed,default=_json_default))
+        else:
+            click.echo(feed.url)
 
 @list_cmd.command()
+@click.option(
+    '--json',
+    'json_output',
+    is_flag=True,
+    help='Output as JSON.',
+)
 @pass_reader
-def entries(reader):
-    """List all the entries.
-
-    Outputs one line per entry in the following format:
-
-        <feed URL> <entry link or id>
-
-    """
+def entries(reader, json_output):
+    """List all the entries."""
     for entry in reader.get_entries():
-        click.echo(f"{entry.feed.url} {entry.link or entry.id}")
+        if json_output:
+            entry = entry._replace(_sequence=None)  #fix: bytes not JSON serializable
+            click.echo(json.dumps(entry, default=_json_default))
+        else:
+            click.echo(f"{entry.feed.url} {entry.link or entry.id}")
 
 
 @cli.group()
